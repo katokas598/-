@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки - Discord Bot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 30px;">⚙️ Настройки бота</h1>
+
+<div class="card" style="animation: slideIn 0.5s ease;">
+    <div class="card-title">
+        <span>📝 Основные настройки</span>
+    </div>
+    
+    <form method="post" action="/api/settings">
+        <div class="form-group">
+            <label class="form-label">Префикс команд</label>
+            <input type="text" name="prefix" class="form-input" value="{{ config.prefix }}" placeholder="!" required>
+            <p style="color: var(--text-muted); font-size: 12px; margin-top: 5px;">Символ перед командами бота (например: !ping)</p>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Категории тикетов</label>
+            <input type="text" name="ticket_categories" class="form-input" value="{{ config.ticket_categories|join(',') }}" placeholder="Техподдержка,Жалобы,Предложения,Другое" required>
+            <p style="color: var(--text-muted); font-size: 12px; margin-top: 5px;">Категории тикетов через запятую</p>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Максимальное количество предупреждений</label>
+            <input type="number" name="max_warns" class="form-input" value="{{ config.max_warns|default(3) }}" min="1" max="10" required>
+            <p style="color: var(--text-muted); font-size: 12px; margin-top: 5px;">При достижении этого количества пользователь будет автоматически забанен</p>
+        </div>
+        
+        <button type="submit" class="btn btn-success">
+            💾 Сохранить настройки
+        </button>
+    </form>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-title">
+        <span>📋 Информация о боте</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 5px;">
+            <p style="color: var(--text-muted); font-size: 12px;">ID Сервера</p>
+            <p style="font-family: monospace;">{{ config.guild_id }}</p>
+        </div>
+        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 5px;">
+            <p style="color: var(--text-muted); font-size: 12px;">Префикс</p>
+            <p style="font-family: monospace;">{{ config.prefix }}</p>
+        </div>
+        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 5px;">
+            <p style="color: var(--text-muted); font-size: 12px;">Категории</p>
+            <p style="font-family: monospace;">{{ config.ticket_categories|join(', ') }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-title">
+        <span>🔧 Команды модерации</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+        <code style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px;">!ban @user [причина]</code>
+        <code style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px;">!unban ID</code>
+        <code style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px;">!kick @user [причина]</code>
+        <code style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px;">!mute @user [время]</code>
+        <code style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px;">!unmute @user</code>
+        <code style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px;">!warn @user [причина]</code>
+        <code style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px;">!clear [кол-во]</code>
+        <code style="background: var(--bg-tertiary); padding: 10px; border-radius: 5px;">!lock / !unlock</code>
+    </div>
+</div>
+{% endblock %}

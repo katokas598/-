@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Тикеты - Discord Bot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 30px;">🎫 Управление тикетами</h1>
+
+<div class="card">
+    <div class="card-title">
+        <span>📋 Список тикетов</span>
+    </div>
+    
+    {% if tickets %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Пользователь</th>
+                <th>Категория</th>
+                <th>Канал</th>
+                <th>Статус</th>
+                <th>Дата</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td>#{{ ticket.id }}</td>
+                <td><code>{{ ticket.user_id }}</code></td>
+                <td><span class="badge badge-success">{{ ticket.category }}</span></td>
+                <td><code>{{ ticket.channel_id }}</code></td>
+                <td>
+                    {% if ticket.status == 'open' %}
+                    <span class="badge badge-success">Открыт</span>
+                    {% else %}
+                    <span class="badge badge-danger">Закрыт</span>
+                    {% endif %}
+                </td>
+                <td>{{ ticket.created_at[:10] if ticket.created_at else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 30px;">
+        Нет тикетов. Тикеты создаются пользователями через команду бота.
+    </p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-title">
+        <span>📝 Информация</span>
+    </div>
+    <p style="color: var(--text-muted); line-height: 1.8;">
+        Для ответа на тикет перейдите в канал тикета на Discord сервере.
+        Используйте команду <code>!closeticket</code> для закрытия тикета.<br><br>
+        <strong>Команды тикетов:</strong><br>
+        <code>!ticket [категория]</code> - создать тикет<br>
+        <code>!closeticket</code> - закрыть тикет
+    </p>
+</div>
+{% endblock %}

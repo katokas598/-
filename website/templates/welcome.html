@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Приветствие - Discord Bot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 30px;">👋 Настройка приветствия</h1>
+
+<div class="card" style="animation: slideIn 0.5s ease;">
+    <div class="card-title">
+        <span>⚙️ Параметры приветствия</span>
+    </div>
+    
+    <form method="post" action="/api/welcome">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <label class="toggle">
+                <input type="checkbox" name="enabled" value="1" {% if welcome.enabled %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+            </label>
+            <span>Включить приветствие новых участников</span>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Канал для приветствия</label>
+            <select name="channel_id" class="form-select">
+                <option value="">-- Выберите канал --</option>
+                {% for channel in channels %}
+                <option value="{{ channel.id }}" {% if welcome.channel_id == channel.id %}selected{% endif %}>
+                    #{{ channel.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Сообщение приветствия</label>
+            <textarea name="message" class="form-textarea" placeholder="Добро пожаловать, {user}!">{{ welcome.message }}</textarea>
+        </div>
+        
+        <button type="submit" class="btn btn-success">
+            💾 Сохранить настройки
+        </button>
+    </form>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-title">
+        <span>📝 Доступные переменные</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 5px;">
+            <code style="color: var(--accent);">{user}</code>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">Упоминание пользователя (@user)</p>
+        </div>
+        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 5px;">
+            <code style="color: var(--accent);">{username}</code>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">Имя пользователя</p>
+        </div>
+        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 5px;">
+            <code style="color: var(--accent);">{server}</code>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">Название сервера</p>
+        </div>
+        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 5px;">
+            <code style="color: var(--accent);">{member_count}</code>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">Количество участников</p>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-title">
+        <span>👁️ Предпросмотр</span>
+    </div>
+    <div style="background: var(--bg-tertiary); padding: 20px; border-radius: 5px; font-family: monospace;">
+        <p id="preview-text" style="color: var(--text-main);">
+            {% if welcome.message %}
+                {{ welcome.message.replace('{user}', '@User').replace('{username', 'User').replace('{server}', 'Server Name').replace('{member_count}', '42') }}
+            {% else %}
+                Добро пожаловать, @User! Добро пожаловать на сервер Server Name!
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<script>
+    document.querySelector('textarea[name="message"]').addEventListener('input', function() {
+        let text = this.value
+            .replace('{user}', '@User')
+            .replace('{username}', 'User')
+            .replace('{server}', 'Server Name')
+            .replace('{member_count}', '42');
+        document.getElementById('preview-text').textContent = text || 'Добро пожаловать, @User!';
+    });
+</script>
+{% endblock %}

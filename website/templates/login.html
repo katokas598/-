@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Вход - Discord Bot{% endblock %}
+
+{% block content %}
+<style>
+    .login-container {
+        max-width: 400px;
+        margin: 100px auto 0;
+    }
+    
+    .login-logo {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .login-logo img {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.4); }
+        50% { box-shadow: 0 0 0 15px rgba(88, 101, 242, 0); }
+    }
+</style>
+
+<div class="login-container">
+    <div class="card" style="animation: slideIn 0.5s ease;">
+        <div class="login-logo">
+            <div style="font-size: 60px;">🤖</div>
+        </div>
+        
+        <h2 style="text-align: center; margin-bottom: 30px;">Вход в панель управления</h2>
+        
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="post" action="/api/login">
+            <div class="form-group">
+                <label class="form-label">Логин</label>
+                <input type="text" name="username" class="form-input" placeholder="Введите логин" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Пароль</label>
+                <input type="password" name="password" class="form-input" placeholder="Введите пароль" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Войти
+            </button>
+        </form>
+        
+        <p style="text-align: center; margin-top: 20px; color: var(--text-muted); font-size: 13px;">
+            Данные для входа указаны при настройке бота
+        </p>
+    </div>
+</div>
+{% endblock %}

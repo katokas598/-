@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Команды - Discord Bot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 30px;">💬 Управление командами</h1>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+    <div class="card">
+        <div class="card-title">
+            <span>➕ Добавить команду</span>
+        </div>
+        
+        <form method="post" action="/api/commands">
+            <div class="form-group">
+                <label class="form-label">Триггер (без префикса)</label>
+                <input type="text" name="trigger" class="form-input" placeholder="Например: привет" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Ответ</label>
+                <textarea name="response" class="form-textarea" placeholder="Текст ответа команды" required></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-success" style="width: 100%;">
+                Добавить команду
+            </button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <div class="card-title">
+            <span>📋 Список команд</span>
+        </div>
+        
+        {% if commands %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Триггер</th>
+                    <th>Ответ</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cmd in commands %}
+                <tr>
+                    <td><code>{{ cmd.trigger }}</code></td>
+                    <td>{{ cmd.response[:50] }}{% if cmd.response|length > 50 %}...{% endif %}</td>
+                    <td>
+                        <a href="/api/commands/{{ cmd.id }}/delete" class="btn btn-danger" style="padding: 8px 15px; font-size: 12px;">
+                            🗑️ Удалить
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: var(--text-muted); text-align: center; padding: 30px;">
+            Нет созданных команд. Создайте первую команду слева.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-title">
+        <span>📝 Инструкция</span>
+    </div>
+    <p style="color: var(--text-muted); line-height: 1.8;">
+        Для создания команды укажите триггер (слово) и текст ответа. После создания команды,
+        пользователи смогут использовать её в чате без префикса бота.<br><br>
+        <strong>Пример:</strong> Триггер: <code>привет</code> → Ответ: <code>Привет! Как дела?</code><br>
+        Теперь при написании <code>привет</code> бот ответит: <code>Привет! Как дела?</code>
+    </p>
+</div>
+{% endblock %}

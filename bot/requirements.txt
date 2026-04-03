@@ -1,0 +1,11 @@
+discord.py
+aiogram==3.4.1
+python-dotenv
+fastapi
+uvicorn
+jinja2
+python-multipart
+passlib
+bcrypt
+httpx
+aiohttp

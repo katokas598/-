@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Discord Bot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 30px;">Панель управления</h1>
+
+<div class="stats-grid">
+    <div class="stat-card" style="animation: slideIn 0.3s ease;">
+        <div class="stat-value">{{ stats.members }}</div>
+        <div class="stat-label">👥 Участников</div>
+    </div>
+    
+    <div class="stat-card" style="animation: slideIn 0.4s ease;">
+        <div class="stat-value">{{ stats.channels }}</div>
+        <div class="stat-label">📢 Каналов</div>
+    </div>
+    
+    <div class="stat-card" style="animation: slideIn 0.5s ease;">
+        <div class="stat-value">{{ stats.roles }}</div>
+        <div class="stat-label">🎭 Ролей</div>
+    </div>
+    
+    <div class="stat-card" style="animation: slideIn 0.6s ease;">
+        <div class="stat-value">{{ stats.open_tickets }}</div>
+        <div class="stat-label">🎫 Открытых тикетов</div>
+    </div>
+    
+    <div class="stat-card" style="animation: slideIn 0.7s ease;">
+        <div class="stat-value">{{ stats.custom_commands }}</div>
+        <div class="stat-label">💬 Кастомных команд</div>
+    </div>
+    
+    <div class="stat-card" style="animation: slideIn 0.8s ease;">
+        <div class="stat-value">{{ stats.total_warns }}</div>
+        <div class="stat-label">⚠️ Всего предупреждений</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+    <div class="card">
+        <div class="card-title">
+            <span>📊 Информация о сервере</span>
+        </div>
+        <p><strong>Название:</strong> {{ stats.server_name }}</p>
+        <p><strong>Префикс бота:</strong> {{ prefix }}</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-title">
+            <span>⚡ Быстрые действия</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <a href="/commands" class="btn btn-primary">💬 Команды</a>
+            <a href="/welcome" class="btn btn-primary">👋 Приветствие</a>
+            <a href="/tickets" class="btn btn-primary">🎫 Тикеты</a>
+            <a href="/settings" class="btn btn-primary">⚙️ Настройки</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
