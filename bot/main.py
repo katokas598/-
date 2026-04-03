@@ -18,7 +18,7 @@ def check_config():
     with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
 
-    required = ["discord_token", "telegram_token"]
+    required = ["discord_token"]
     missing = [key for key in required if not config.get(key)]
 
     if missing:
@@ -37,13 +37,6 @@ async def run_discord():
     await run_bot(DISCORD_TOKEN)
 
 
-async def run_telegram():
-    from telegram_bot.bot import run_bot
-
-    print("🚀 Запуск Telegram бота...")
-    await run_bot()
-
-
 async def main():
     if not check_config():
         return
@@ -53,10 +46,10 @@ async def main():
     database.init_db()
 
     print("\n" + "=" * 50)
-    print("   DISCORDSER BOT ЗАПУЩЕН")
+    print("   DISCORD BOT ЗАПУЩЕН")
     print("=" * 50 + "\n")
 
-    await asyncio.gather(run_discord(), run_telegram())
+    await run_discord()
 
 
 if __name__ == "__main__":

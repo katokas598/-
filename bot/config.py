@@ -17,10 +17,9 @@ def load_config():
 CONFIG = load_config()
 
 DISCORD_TOKEN = CONFIG.get("discord_token", "")
-TELEGRAM_TOKEN = CONFIG.get("telegram_token", "")
 PREFIX = CONFIG.get("prefix", "!")
-ADMIN_IDS = CONFIG.get("admin_ids", [])
 GUILD_ID = CONFIG.get("guild_id", "")
 TICKET_CATEGORIES = CONFIG.get(
     "ticket_categories", ["Техподдержка", "Жалобы", "Предложения", "Другое"]
 )
+MAX_WARNS = CONFIG.get("max_warns", 3)

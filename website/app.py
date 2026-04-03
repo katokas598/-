@@ -3,11 +3,12 @@ import sys
 import json
 import sqlite3
 import secrets
+import subprocess
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi import FastAPI, Request, HTTPException, Depends, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from passlib.hash import bcrypt
@@ -30,6 +31,8 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 SECRET_KEY = secrets.token_hex(32)
 
+BOT_PROCESS = None
+
 
 def get_db():
     conn = sqlite3.connect(str(DB_PATH))
@@ -45,16 +48,10 @@ def get_config():
     return {}
 
 
-def verify_user(username, password):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM web_users WHERE username = ?", (username,))
-    user = cursor.fetchone()
-    conn.close()
-
-    if user and bcrypt.verify(password, user["password_hash"]):
-        return True
-    return False
+def save_config(config):
+    config_path = BOT_DIR / "config.json"
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
 
 
 @app.middleware("http")
@@ -104,18 +101,43 @@ async def get_discord_guild():
     return None
 
 
+async def discord_api_request(method, endpoint, data=None):
+    config = get_config()
+    token = config.get("discord_token")
+    guild_id = config.get("guild_id")
+
+    if not token or not guild_id:
+        return None
+
+    url = f"https://discord.com/api/v10{endpoint}"
+    headers = {"Authorization": f"Bot {token}", "Content-Type": "application/json"}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            if method == "GET":
+                response = await client.get(url, headers=headers)
+            elif method == "POST":
+                response = await client.post(url, headers=headers, json=data)
+            elif method == "DELETE":
+                response = await client.delete(url, headers=headers)
+
+            if response.status_code in [200, 201, 204]:
+                return response.json() if response.text else {}
+            return {"error": response.text, "status": response.status_code}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    username = request.state.user
-    if not username:
+    if not request.state.user:
         return templates.TemplateResponse("login.html", {"request": request})
     return RedirectResponse("/dashboard")
 
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    username = request.state.user
-    if username:
+    if request.state.user:
         return RedirectResponse("/dashboard")
     return templates.TemplateResponse("login.html", {"request": request})
 
@@ -189,7 +211,6 @@ async def dashboard(request: Request, user: str = Depends(get_current_user)):
         return RedirectResponse("/login")
 
     config = get_config()
-
     guild_data = await get_discord_guild()
 
     conn = get_db()
@@ -204,6 +225,9 @@ async def dashboard(request: Request, user: str = Depends(get_current_user)):
     cursor.execute("SELECT COUNT(*) FROM warns")
     total_warns = cursor.fetchone()[0]
 
+    cursor.execute("SELECT COUNT(*) FROM mod_logs")
+    mod_logs_count = cursor.fetchone()[0]
+
     conn.close()
 
     stats = {
@@ -213,6 +237,7 @@ async def dashboard(request: Request, user: str = Depends(get_current_user)):
         "open_tickets": open_tickets,
         "custom_commands": custom_commands,
         "total_warns": total_warns,
+        "mod_logs": mod_logs_count,
         "server_name": guild_data.get("name", "Unknown") if guild_data else "Unknown",
     }
 
@@ -223,7 +248,6 @@ async def dashboard(request: Request, user: str = Depends(get_current_user)):
             "user": user,
             "stats": stats,
             "prefix": config.get("prefix", "!"),
-            "guild_icon": guild_data.get("icon") if guild_data else None,
         },
     )
 
@@ -251,16 +275,16 @@ async def add_command(request: Request, user: str = Depends(get_current_user)):
 
     form_data = await request.form()
     trigger = form_data.get("trigger")
-    response = form_data.get("response")
+    response_text = form_data.get("response")
 
-    if not trigger or not response:
+    if not trigger or not response_text:
         raise HTTPException(status_code=400, detail="Missing data")
 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO custom_commands (trigger, response, created_by) VALUES (?, ?, ?)",
-        (trigger, response, user),
+        (trigger, response_text, user),
     )
     conn.commit()
     conn.close()
@@ -293,7 +317,6 @@ async def welcome_page(request: Request, user: str = Depends(get_current_user)):
     welcome = cursor.fetchone()
     conn.close()
 
-    config = get_config()
     guild_data = await get_discord_guild()
 
     channels = []
@@ -388,11 +411,191 @@ async def save_settings(request: Request, user: str = Depends(get_current_user))
     ]
     config["max_warns"] = int(max_warns)
 
-    config_path = BOT_DIR / "config.json"
-    with open(config_path, "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
+    save_config(config)
 
     return RedirectResponse("/settings", status_code=302)
+
+
+@app.get("/moderation", response_class=HTMLResponse)
+async def moderation_page(request: Request, user: str = Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login")
+
+    return templates.TemplateResponse(
+        "moderation.html", {"request": request, "user": user}
+    )
+
+
+@app.post("/api/ban")
+async def api_ban(request: Request, user: str = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+
+    form_data = await request.form()
+    user_id = form_data.get("user_id")
+    reason = form_data.get("reason", "Не указана")
+
+    if not user_id:
+        return JSONResponse({"success": False, "error": "User ID обязателен"})
+
+    result = await discord_api_request(
+        "POST",
+        f"/guilds/{get_config().get('guild_id')}/bans/{user_id}",
+        {"reason": reason},
+    )
+
+    if "error" in result:
+        return JSONResponse({"success": False, "error": result.get("error", "Ошибка")})
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO mod_logs (action, user_id, moderator_id, reason, timestamp) VALUES (?, ?, ?, ?, ?)",
+        ("ban", user_id, user, reason, datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+    return JSONResponse({"success": True, "message": f"Пользователь {user_id} забанен"})
+
+
+@app.post("/api/kick")
+async def api_kick(request: Request, user: str = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+
+    form_data = await request.form()
+    user_id = form_data.get("user_id")
+    reason = form_data.get("reason", "Не указана")
+
+    if not user_id:
+        return JSONResponse({"success": False, "error": "User ID обязателен"})
+
+    result = await discord_api_request(
+        "DELETE", f"/guilds/{get_config().get('guild_id')}/members/{user_id}"
+    )
+
+    if "error" in result:
+        return JSONResponse({"success": False, "error": result.get("error", "Ошибка")})
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO mod_logs (action, user_id, moderator_id, reason, timestamp) VALUES (?, ?, ?, ?, ?)",
+        ("kick", user_id, user, reason, datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+    return JSONResponse({"success": True, "message": f"Пользователь {user_id} кикнут"})
+
+
+@app.post("/api/warn")
+async def api_warn(request: Request, user: str = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+
+    form_data = await request.form()
+    user_id = form_data.get("user_id")
+    reason = form_data.get("reason", "Не указана")
+
+    if not user_id:
+        return JSONResponse({"success": False, "error": "User ID обязателен"})
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO warns (user_id, reason, moderator_id, created_at) VALUES (?, ?, ?, ?)",
+        (user_id, reason, user, datetime.now().isoformat()),
+    )
+    cursor.execute(
+        "INSERT INTO mod_logs (action, user_id, moderator_id, reason, timestamp) VALUES (?, ?, ?, ?, ?)",
+        ("warn", user_id, user, reason, datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+    return JSONResponse(
+        {"success": True, "message": f"Пользователю {user_id} выдано предупреждение"}
+    )
+
+
+@app.get("/logs", response_class=HTMLResponse)
+async def logs_page(request: Request, user: str = Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login")
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM mod_logs ORDER BY id DESC LIMIT 100")
+    logs = cursor.fetchall()
+    conn.close()
+
+    return templates.TemplateResponse(
+        "logs.html", {"request": request, "user": user, "logs": logs}
+    )
+
+
+@app.get("/users", response_class=HTMLResponse)
+async def users_page(request: Request, user: str = Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login")
+
+    guild_data = await get_discord_guild()
+    members = []
+
+    if guild_data:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"https://discord.com/api/v10/guilds/{get_config().get('guild_id')}/members?limit=1000",
+                    headers={
+                        "Authorization": f"Bot {get_config().get('discord_token')}"
+                    },
+                )
+                if response.status_code == 200:
+                    members = response.json()
+        except:
+            pass
+
+    return templates.TemplateResponse(
+        "users.html", {"request": request, "user": user, "members": members}
+    )
+
+
+@app.get("/api/stats")
+async def api_stats(request: Request, user: str = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+
+    guild_data = await get_discord_guild()
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status = 'open'")
+    open_tickets = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM custom_commands")
+    custom_commands = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM warns")
+    total_warns = cursor.fetchone()[0]
+
+    conn.close()
+
+    return JSONResponse(
+        {
+            "members": guild_data.get("approximate_member_count", 0)
+            if guild_data
+            else 0,
+            "channels": len(guild_data.get("channels", [])) if guild_data else 0,
+            "roles": len(guild_data.get("roles", [])) if guild_data else 0,
+            "open_tickets": open_tickets,
+            "custom_commands": custom_commands,
+            "total_warns": total_warns,
+        }
+    )
 
 
 if __name__ == "__main__":

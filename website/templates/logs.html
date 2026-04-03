@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Логи модерации - Discord Bot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 30px;">📜 Логи модерации</h1>
+
+<div class="card">
+    <div class="card-title">
+        <span>История модераторских действий</span>
+    </div>
+    
+    {% if logs %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Действие</th>
+                <th>Пользователь</th>
+                <th>Модератор</th>
+                <th>Причина</th>
+                <th>Дата</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.id }}</td>
+                <td>
+                    {% if log.action == 'ban' %}
+                    <span class="badge badge-danger">Бан</span>
+                    {% elif log.action == 'kick' %}
+                    <span class="badge badge-warning">Кик</span>
+                    {% elif log.action == 'mute' %}
+                    <span class="badge badge-warning">Мут</span>
+                    {% elif log.action == 'warn' %}
+                    <span class="badge badge-primary">Варн</span>
+                    {% elif log.action == 'unban' %}
+                    <span class="badge badge-success">Разбан</span>
+                    {% elif log.action == 'unmute' %}
+                    <span class="badge badge-success">Размут</span>
+                    {% else %}
+                    <span class="badge">{{ log.action }}</span>
+                    {% endif %}
+                </td>
+                <td><code>{{ log.user_id }}</code></td>
+                <td><code>{{ log.moderator_id }}</code></td>
+                <td>{{ log.reason or '-' }}</td>
+                <td>{{ log.timestamp[:10] if log.timestamp else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 30px;">
+        Нет записей в логах.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

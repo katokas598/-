@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Пользователи - Discord Bot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 30px;">👥 Пользователи сервера</h1>
+
+<div class="card">
+    <div class="card-title">
+        <span>Список участников</span>
+    </div>
+    
+    {% if members %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Аватар</th>
+                <th>Имя</th>
+                <th>ID</th>
+                <th>Присоединился</th>
+                <th>Роли</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in members %}
+            <tr>
+                <td>
+                    {% if member.avatar %}
+                    <img src="https://cdn.discordapp.com/avatars/{{ member.user.id }}/{{ member.user.avatar }}.png" style="width: 40px; height: 40px; border-radius: 50%;">
+                    {% else %}
+                    <img src="https://cdn.discordapp.com/embed/avatars/{{ member.user.bot and 1 or 0 }}.png" style="width: 40px; height: 40px; border-radius: 50%;">
+                    {% endif %}
+                </td>
+                <td>
+                    {{ member.nick or member.user.username }}
+                    {% if member.user.bot %}
+                    <span class="badge badge-warning">BOT</span>
+                    {% endif %}
+                </td>
+                <td><code>{{ member.user.id }}</code></td>
+                <td>{{ member.joined_at[:10] if member.joined_at else 'Неизвестно' }}</td>
+                <td>{{ member.roles|length }} ролей</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 30px;">
+        Не удалось загрузить список пользователей. Проверьте токен бота и ID сервера.
+    </p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-title">
+        <span>📝 Как скопировать ID пользователя</span>
+    </div>
+    <p style="color: var(--text-muted); line-height: 1.8;">
+        1. Откройте <strong>Настройки Discord</strong><br>
+        2. Перейдите в раздел <strong>Расширенные</strong><br>
+        3. Включите <strong>Режим разработчика</strong><br>
+        4. Правый клик по пользователю → <strong>Копировать ID</strong>
+    </p>
+</div>
+{% endblock %}

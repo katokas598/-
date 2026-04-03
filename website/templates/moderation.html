@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Модерация - Discord Bot{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 30px;">🛡️ Модерация</h1>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+    <div class="card">
+        <div class="card-title">
+            <span>🔨 Бан пользователя</span>
+        </div>
+        <form id="banForm">
+            <div class="form-group">
+                <label class="form-label">ID пользователя</label>
+                <input type="text" name="user_id" class="form-input" placeholder="Введите ID пользователя" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Причина</label>
+                <input type="text" name="reason" class="form-input" placeholder="Причина бана">
+            </div>
+            <button type="submit" class="btn btn-danger" style="width: 100%;">Забанить</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-title">
+            <span>👢 Кик пользователя</span>
+        </div>
+        <form id="kickForm">
+            <div class="form-group">
+                <label class="form-label">ID пользователя</label>
+                <input type="text" name="user_id" class="form-input" placeholder="Введите ID пользователя" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Причина</label>
+                <input type="text" name="reason" class="form-input" placeholder="Причина кика">
+            </div>
+            <button type="submit" class="btn btn-warning" style="width: 100%; color: #1e1e1e;">Кикнуть</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-title">
+            <span>⚠️ Выдать предупреждение</span>
+        </div>
+        <form id="warnForm">
+            <div class="form-group">
+                <label class="form-label">ID пользователя</label>
+                <input type="text" name="user_id" class="form-input" placeholder="Введите ID пользователя" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Причина</label>
+                <input type="text" name="reason" class="form-input" placeholder="Причина предупреждения">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Выдать предупреждение</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-title">
+        <span>📝 Инструкция</span>
+    </div>
+    <p style="color: var(--text-muted); line-height: 1.8;">
+        Для выполнения модераторских действий введите ID пользователя.<br>
+        Чтобы узнать ID пользователя, включите режим разработчика в Discord:<br>
+        <strong>Настройки → Расширенные → Режим разработчика</strong><br>
+        Затем правый клик по пользователю → "Копировать ID"
+    </p>
+</div>
+
+<div id="result" style="display: none; margin-top: 20px;"></div>
+
+<script>
+    async function submitForm(formId, endpoint) {
+        event.preventDefault();
+        const form = document.getElementById(formId);
+        const formData = new FormData(form);
+        const resultDiv = document.getElementById('result');
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            resultDiv.style.display = 'block';
+            if (data.success) {
+                resultDiv.innerHTML = `<div class="success-message">✅ ${data.message}</div>`;
+                form.reset();
+            } else {
+                resultDiv.innerHTML = `<div class="error-message">❌ ${data.error}</div>`;
+            }
+            
+            setTimeout(() => { resultDiv.style.display = 'none'; }, 5000);
+        } catch (e) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="error-message">❌ Ошибка: ${e}</div>`;
+        }
+    }
+
+    document.getElementById('banForm').addEventListener('submit', () => submitForm('banForm', '/api/ban'));
+    document.getElementById('kickForm').addEventListener('submit', () => submitForm('kickForm', '/api/kick'));
+    document.getElementById('warnForm').addEventListener('submit', () => submitForm('warnForm', '/api/warn'));
+</script>
+{% endblock %}
