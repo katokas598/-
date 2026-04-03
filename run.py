@@ -1,92 +1,168 @@
+#!/usr/bin/env python3
 """
 Discord Bot with Web Dashboard
-==============================
-Автор: Discord Bot Developer
-Версия: 1.0.0
-
-Запуск:
-    python setup.py           - Настройка бота и сайта
-    python run.py            - Запуск всего (бот + сайт)
-
-или отдельно:
-    python bot/main.py       - Запуск только бота
-    cd website && python -m uvicorn app:app --host 0.0.0.0 --port 8000
+================================
+Автозапуск с виртуальным окружением
 """
 
 import os
 import sys
+import json
+import subprocess
+import platform
+import time
+import signal
+
+
+def get_venv_python():
+    if platform.system() == "Windows":
+        return os.path.join("venv", "Scripts", "python")
+    return os.path.join("venv", "bin", "python")
+
+
+def get_venv_pip():
+    if platform.system() == "Windows":
+        return os.path.join("venv", "Scripts", "pip")
+    return os.path.join("venv", "bin", "pip")
+
+
+def check_venv():
+    return os.path.exists("venv") and os.path.exists(get_venv_python())
+
+
+def install_deps():
+    if not check_venv():
+        print("\n🟢 Создаю виртуальное окружение...")
+        try:
+            subprocess.run([sys.executable, "-m", "venv", "venv"], check=True)
+            print("   ✅ Виртуальное окружение создано!")
+        except:
+            print("   ❌ Ошибка создания venv")
+            return False
+
+    print("\n📦 Установка зависимостей...")
+    try:
+        pip = get_venv_pip()
+        subprocess.run([pip, "install", "-r", "requirements.txt"], check=True)
+        print("   ✅ Зависимости установлены!")
+        return True
+    except:
+        print("   ⚠️ Зависимости уже установлены или ошибка")
+        return True
+
+
+def get_config():
+    try:
+        with open("bot/config.json", "r") as f:
+            return json.load(f)
+    except:
+        return {"domain": "localhost", "port": "8000"}
+
+
+def run_bot():
+    python = get_venv_python()
+
+    print("\n🎮 Запуск Discord бота...")
+
+    if platform.system() == "Windows":
+        process = subprocess.Popen(
+            [python, "bot/main.py"], creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+        )
+    else:
+        process = subprocess.Popen(
+            [python, "bot/main.py"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    return process
+
+
+def run_website():
+    python = get_venv_python()
+
+    print("\n🌐 Запуск веб-сайта...")
+
+    if platform.system() == "Windows":
+        process = subprocess.Popen(
+            [
+                python,
+                "-m",
+                "uvicorn",
+                "website.app:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
+            ],
+            cwd=os.getcwd(),
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
+    else:
+        process = subprocess.Popen(
+            [
+                python,
+                "-m",
+                "uvicorn",
+                "website.app:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    return process
 
 
 def main():
     print("\n" + "=" * 60)
-    print("   DISCORDSER BOT + WEB DASHBOARD")
+    print("   🚀 ЗАПУСК DISCORD BOT + WEB PANEL")
     print("=" * 60)
-    print("\nВыберите действие:")
-    print("1. 🚀 Настроить бота и сайт")
-    print("2. ▶️  Запустить всё")
-    print("3. 🎮 Запустить только бота")
-    print("4. 🌐 Запустить только сайт")
-    print("5. ❌ Выход")
 
-    choice = input("\n>> ").strip()
+    # Проверка и установка зависимостей
+    if not install_deps():
+        print("\n❌ Не удалось установить зависимости")
+        return
 
-    if choice == "1":
-        os.system("python setup.py")
-    elif choice == "2":
-        print("\n🚀 Запуск бота и сайта...")
-        print("=" * 60)
-        print("📝 Сайт будет доступен по адресу: http://localhost:8000")
-        print("=" * 60 + "\n")
+    # Загрузка конфига
+    config = get_config()
+    domain = config.get("domain", "localhost")
+    port = config.get("port", "8000")
 
-        import threading
-        import subprocess
+    # Запуск процессов
+    bot_process = run_bot()
+    time.sleep(2)
+    website_process = run_website()
 
-        def run_bot():
-            os.chdir("bot")
-            subprocess.run([sys.executable, "main.py"])
+    print("\n" + "=" * 60)
+    print("✅ ВСЁ ЗАПУЩЕНО!")
+    print("=" * 60)
+    print(f"\n🌐 Откройте в браузере:")
+    print(f"   http://{domain}:{port}")
+    print(f"\n🔐 Логин и пароль указаны при настройке")
+    print("=" * 60)
+    print("\nДля остановки нажмите Ctrl+C")
+    print("=" * 60)
 
-        def run_website():
-            import time
+    try:
+        # Ожидание с обработкой Ctrl+C
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n🛑 Остановка...")
 
-            time.sleep(3)
-            os.chdir("website")
-            subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "uvicorn",
-                    "app:app",
-                    "--host",
-                    "0.0.0.0",
-                    "--port",
-                    "8000",
-                ]
-            )
+        # Остановка процессов
+        if platform.system() == "Windows":
+            bot_process.terminate()
+            website_process.terminate()
+        else:
+            bot_process.terminate()
+            website_process.terminate()
 
-        bot_thread = threading.Thread(target=run_bot, daemon=True)
-        site_thread = threading.Thread(target=run_website, daemon=True)
-
-        bot_thread.start()
-        site_thread.start()
-
-        try:
-            bot_thread.join()
-        except KeyboardInterrupt:
-            print("\n🛑 Остановка...")
-
-    elif choice == "3":
-        print("\n🎮 Запуск бота...")
-        os.chdir("bot")
-        os.system("python main.py")
-
-    elif choice == "4":
-        print("\n🌐 Запуск сайта...")
-        print("📝 Сайт будет доступен по адресу: http://localhost:8000")
-        os.chdir("website")
-        os.system("python -m uvicorn app:app --host 0.0.0.0 --port 8000")
-
-    else:
-        print("\n👋 До свидания!")
+        print("✅ Остановлено!")
 
 
 if __name__ == "__main__":

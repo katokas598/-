@@ -14,13 +14,14 @@ from fastapi.templating import Jinja2Templates
 from passlib.hash import bcrypt
 import httpx
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bot"))
-
-app = FastAPI(title="Discord Bot Dashboard")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+BOT_DIR = PROJECT_ROOT / "bot"
+sys.path.insert(0, str(BOT_DIR))
 
 BASE_DIR = Path(__file__).resolve().parent
-BOT_DIR = BASE_DIR.parent / "bot"
 DB_PATH = BOT_DIR / "bot.db"
+
+app = FastAPI(title="Discord Bot Dashboard")
 
 app.mount(
     str(BASE_DIR / "static"),
@@ -34,7 +35,22 @@ SECRET_KEY = secrets.token_hex(32)
 BOT_PROCESS = None
 
 
+def init_database():
+    try:
+        import database as db_module
+
+        db_module.init_db()
+    except Exception as e:
+        print(f"Database init error: {e}")
+
+
+init_database()
+
+
 def get_db():
+    if not DB_PATH.exists():
+        init_database()
+
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
